@@ -3,48 +3,35 @@ LABEL maintainer="Samuel Bartag <samuel@samuelbartag.com.br>"
 
 
 WORKDIR /var/www
+RUN rm -rf /var/www/html
 
 # Install packages
-RUN apk --update add wget \
+RUN apk add --no-cache --update --virtual buildDeps \
+    autoconf \
+    bash \
+    nano \
+    wget \
     curl \
     git \
-    grep \
-    build-base \
-    libmemcached-dev \
-    libmcrypt-dev \
-    libxml2-dev \
-    imagemagick-dev \
-    pcre-dev \
-    libtool \
-    make \
-    autoconf \
     g++ \
-    cyrus-sasl-dev \
-    libgsasl-dev \
+    make \
+    mysql-client \
     supervisor
 
-RUN docker-php-ext-install mysqli mbstring pdo pdo_mysql tokenizer xml
+RUN docker-php-ext-install pdo pdo_mysql
 RUN pecl channel-update pecl.php.net \
-    && pecl install xdebug \
-    && pecl install memcached \
-    && pecl install imagick \
-    && pecl install mcrypt-1.0.1 \
     && pecl install redis \
-    && docker-php-ext-enable xdebug \
-    && docker-php-ext-enable memcached \
-    && docker-php-ext-enable imagick \
-    && docker-php-ext-enable mcrypt \
     && docker-php-ext-enable redis
+
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
 # Get access to FPM_Status page /status
 RUN sed -i '/^;pm\.status_path/s/^;//' /usr/local/etc/php-fpm.d/www.conf
 
-RUN rm /var/cache/apk/*
-
 # Add configuration files
 COPY conf/supervisord.conf /etc/
-COPY conf/xdebug.ini /usr/local/etc/php/conf.d/xdebug-enabled.ini
 
+RUN ln -s public html
 
 VOLUME ["/var/www", "/var/log/php"]
 
